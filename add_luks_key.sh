@@ -14,16 +14,15 @@ generate_passphrase() {
 }
 
 # Get a list of all block devices
-devices=$(lsblk -dn -o NAME)
+devices=$(lsblk -lnpo NAME,TYPE | awk '$2=="part" {print $1}')
 
 # Сheck each device for the presence of a LUKS header
 echo "Search for encrypted LUKS devices..."
 luks_device_found=false
 for device in $devices; do
-    device_path="/dev/$device"
-    if [ $(is_luks_encrypted "$device_path") -eq 0 ]; then
-        echo "Found LUKS device: $device_path"
-        luks_device=$device_path
+    if [ $(is_luks_encrypted "$device") -eq 0 ]; then
+        echo "Found LUKS device: $device"
+        luks_device=$device
         luks_device_found=true
         break
     fi
@@ -42,9 +41,16 @@ echo
 # Generating a new passphrase
 new_passphrase=$(generate_passphrase)
 
+# Create a temporary file for the current mode
+password_file=$(mktemp)
+echo -n "$existing_password" > "$password_file"
+
 # Adding a new slot to LUKS with a new passphrase
-echo -n "$existing_password" | cryptsetup luksAddKey "$luks_device" --key-file=-
+echo -n "$new_passphrase" | cryptsetup luksAddKey "$luks_device" --key-file="$password_file"
 luks_add_result=$?
+
+# Deleting a temporary file with a password
+rm -f "$password_file"
 
 # Checking the success of the operation
 if [ $luks_add_result -eq 0 ]; then
@@ -52,7 +58,7 @@ if [ $luks_add_result -eq 0 ]; then
     echo "New passphrase: $new_passphrase"
 
     # Save the new passphrase to a file on your desktop
-    desktop_path=~/Desktop
+    desktop_path="/home/$SUDO_USER/Desktop"
     passphrase_file="$desktop_path/luks_new_passphrase.txt"
     echo "$new_passphrase" > "$passphrase_file"
 
