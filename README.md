@@ -19,7 +19,7 @@ This repository contains a Bash script designed to automate adding a LUKS key to
 1. **Clone the Repository:**
    ```bash
    git clone https://github.com/collmalpa/luks-key-adding-script.git
-   cd luks-key-management-script
+   cd luks-key-adding-script
    ```
 
 2. **Make the Script Executable:**
